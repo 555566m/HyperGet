@@ -9,7 +9,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Unzip project
-        run: unzip -q HyperGet.zip
+        run: |
+          ls -la
+          ZIP=$(find . -maxdepth 2 -iname "*.zip" | head -n 1)
+          if [ -z "$ZIP" ]; then echo "ERROR: repo me koi .zip file nahi mili. Pehle zip upload karo."; exit 1; fi
+          echo "Using $ZIP"
+          mkdir -p proj
+          unzip -q "$ZIP" -d proj
+          ROOT=$(dirname "$(find proj -name settings.gradle.kts | head -n 1)")
+          echo "Project root: $ROOT"
+          echo "ROOT=$ROOT" >> $GITHUB_ENV
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -24,9 +33,9 @@ jobs:
             -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 \
             -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
       - name: Build release APK
-        working-directory: HyperGet
+        working-directory: ${{ env.ROOT }}
         run: gradle :app:assembleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: HyperGet-apk
-          path: HyperGet/app/build/outputs/apk/release/*.apk
+          path: ${{ env.ROOT }}/app/build/outputs/apk/release/*.apk
